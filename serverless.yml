@@ -1,0 +1,192 @@
+
+
+service: MemCachedClusterService
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  tracing: true # enable tracing
+  stackTags:
+    Name: ${self:service}
+    Description: "Highlander-Jettator"
+    CostCenter: "130"
+    BusinessUnit: CDS-US
+    Product: Highlander
+    Application: CDS-US-NonProduction-jettator-catalog-cache
+    Environment: nonprod
+    SupportTeam: asdf@cds-global.com
+  stage: ${opt:stage, 'dev'} # Set the default stage used. Default is dev
+  region: us-east-1
+  environment:
+    serviceName: ${self:service}
+    Application: Mem-cached
+
+# Add the serverless-webpack plugin
+plugins:
+  - serverless-webpack
+  - serverless-offline
+  - api-gateway-stage-tag-plugin
+  - serverless-plugin-tracing
+  - serverless-plugin-stage-variables
+  - serverless-iam-roles-per-function
+
+package:
+  exclude:
+    - "**/node_modules/**"
+
+custom:
+  apiStageTags:
+    Application: highlander-jettator
+    Stage: ${self:provider.stage}  
+  webpackIncludeModules: #true
+    forceExclude:
+      - aws-sdk
+  serverless-offline:
+    port: 3003
+
+functions:
+  MemCachedService:
+    handler: handler.MemCachedService
+    memorySize: 128
+    role: MemCachedServiceLambdaRole
+    events:
+      - http:
+          method: GET
+          path: link
+          cors: true    
+    vpc:
+      securityGroupIds:
+        - !Ref MemcacheEC2SecurityGroup
+      subnetIds:
+        - subnet-52d8f20f
+        - subnet-5c0b3f73 
+        - subnet-72574316
+        - subnet-9dd42ad7
+
+resources:
+  Description: Description of this CloudFormation stack.
+  Resources:
+    MemCachedCatalogCluster:
+      Type: AWS::ElastiCache::CacheCluster
+      Properties: 
+        AZMode: single-az   # Allowed Values: cross-az | single-az
+        CacheNodeType: cache.m3.medium
+        Engine: memcached
+        NumCacheNodes: 1
+        Port: 11211
+        PreferredAvailabilityZones: 
+          - "us-east-1a"
+          # - "us-east-1a"
+          # - "us-east-1b"
+        CacheSecurityGroupNames: 
+          - !Ref MemCacheSecurityGroup
+
+    MemCacheSecurityGroup:
+      Type: AWS::ElastiCache::SecurityGroup
+      Properties: 
+        Description: "Memcached Security Group"
+    
+    MemcachedEC2Instance:
+      Type: AWS::EC2::Instance
+      Properties:
+        KeyName: Jettator_EC2_Instance_Key_Name
+        SecurityGroupIds: 
+          - !Ref MemcacheEC2SecurityGroup
+        InstanceType: t2.nano
+        AvailabilityZone: us-east-1a
+        ImageId: ami-80861296
+        Tags:
+          -
+            Key: Name
+            Value: "Memcached_Web_Server"
+
+    MemcacheEC2SecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties: 
+        GroupDescription: "Security Group for MemcachedEC2 Instance"
+        GroupName: Memcache_Instance_Security_Group
+        SecurityGroupEgress: 
+          - IpProtocol: tcp
+            FromPort: 80
+            ToPort: 80
+            CidrIp: 0.0.0.0/0    
+        SecurityGroupIngress: 
+          - IpProtocol: tcp
+            FromPort: 80
+            ToPort: 80
+            CidrIp: 0.0.0.0/0
+          - IpProtocol: tcp
+            FromPort: 22
+            ToPort: 22
+            CidrIp: 0.0.0.0/0   
+        Tags: 
+          - 
+            Key: Name
+            Value: "Memcache_EC2_Instance_SG"
+        VpcId: "vpc-13c64268"     
+        
+    EC2SecurityGroupEgress:
+      Type: AWS::EC2::SecurityGroupEgress
+      Properties: 
+        CidrIp: 0.0.0.0/0
+        IpProtocol: tcp
+        Description: "Addition Outbound 11211 port"
+        FromPort: 11211
+        ToPort: 11211
+        GroupId: !GetAtt MemcacheEC2SecurityGroup.GroupId
+    
+    EC2SecurityGroupIngress:
+      Type: AWS::EC2::SecurityGroupIngress
+      Properties: 
+        Description: "Addition Inbound 11211 port"
+        FromPort: 11211
+        ToPort: 11211
+        IpProtocol: tcp
+        GroupId: !GetAtt MemcacheEC2SecurityGroup.GroupId
+        SourceSecurityGroupId: !Ref MemcacheEC2SecurityGroup
+    
+    MemcacheSecurityGroupIngress:
+      Type: AWS::ElastiCache::SecurityGroupIngress
+      Properties: 
+        CacheSecurityGroupName: !Ref MemCacheSecurityGroup
+        EC2SecurityGroupName: "Memcache_Instance_Security_Group"
+        EC2SecurityGroupOwnerId: "590449824367"
+    
+    MemCachedServiceLambdaRole:
+      Type: "AWS::IAM::Role"
+      Properties: 
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: MyLambdaExecutionPolicy
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+              - Effect: Allow
+                Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*     
+              - Effect: Allow
+                Action:
+                  - xray:PutTelemetryRecords
+                  - xray:PutTraceSegments
+                Resource: "*" 
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - ec2:CreateNetworkInterface
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DeleteNetworkInterface
+                Resource: "*"                
+        RoleName: ${self:service}-MemCachedServiceLambdaRole-${self:provider.stage}      
