@@ -2,8 +2,8 @@
   "name": "MemCachedClusterService",
   "version": "1.0.0",
   "description": "MemCached Cluster Set up",
-  "main": "index.js",
-  "author": "Tri Luong",
+  "main": "index.ts",
+  "author": "Tri luong",
   "license": "MIT",
   "scripts": {
     "sls": "node_modules/.bin/sls",
@@ -31,9 +31,12 @@
   },
   "dependencies": {
     "@babel/core": "^7.6.0",
+    "@types/aws-lambda": "^8.10.33",
     "api-gateway-stage-tag-plugin": "^1.0.5",
+    "aws-lambda": "^0.1.2",
     "babel-loader": "^8.0.6",
     "elasticache-client": "0.0.7",
+    "lambda": "^0.10.3",
     "memcached": "^2.2.2",
     "serverless": "^1.52.0",
     "serverless-iam-roles-per-function": "^2.0.2",
@@ -50,5 +53,9 @@
     "webpack-bundle-analyzer": "^3.5.0",
     "webpack-cli": "^3.3.9",
     "webpack-node-externals": "^1.7.2"
+  },
+  "repository": "https://github.com/triluong21/AWS-Memcached-Cluster-Service.git",
+  "devDependencies": {
+    "@types/memcached": "^2.2.6"
   }
 }
