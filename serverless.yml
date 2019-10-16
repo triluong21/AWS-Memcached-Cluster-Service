@@ -46,13 +46,13 @@ custom:
 
 functions:
   MemCachedService:
-    handler: handler.MemCachedService
+    handler: src/handler.MemCachedService
     memorySize: 128
     role: MemCachedServiceLambdaRole
     events:
       - http:
           method: GET
-          path: link
+          path: catalogs/{stage}/{prodId}
           cors: true    
     vpc:
       securityGroupIds:

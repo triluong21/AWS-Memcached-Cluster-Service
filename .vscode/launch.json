@@ -1,0 +1,30 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug API Gateway",
+      "program": "${workspaceFolder}/node_modules/serverless/bin/serverless",
+      "env": {
+        "AWS_PROFILE": "nonprodadmin",
+        "AWS_REGION": "us-east-1",
+        "Region": "us-east-1",
+        "AccountId": "205705021073",
+        //"IS_OFFLINE": "false",
+      },
+      "args": [
+        "offline",
+        "start",
+        "--stage",
+        "dev"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/.webpack/**/*.js"
+      ]
+    }
+  ]
+}
