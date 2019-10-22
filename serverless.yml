@@ -20,6 +20,7 @@ provider:
   environment:
     serviceName: ${self:service}
     Application: Mem-cached
+    ariaAuthKey: ${ssm:AriaAuthCredentialsEncrypted~true}      
 
 # Add the serverless-webpack plugin
 plugins:
@@ -58,10 +59,7 @@ functions:
       securityGroupIds:
         - !Ref MemcacheEC2SecurityGroup
       subnetIds:
-        - subnet-52d8f20f
-        - subnet-5c0b3f73 
-        - subnet-72574316
-        - subnet-9dd42ad7
+        - subnet-a5d530f9
 
 resources:
   Description: Description of this CloudFormation stack.
@@ -78,33 +76,29 @@ resources:
           - "us-east-1a"
           # - "us-east-1a"
           # - "us-east-1b"
-        CacheSecurityGroupNames: 
-          - !Ref MemCacheSecurityGroup
+        # CacheSecurityGroupNames: 
+        #   - !Ref MemCacheSecurityGroup
+        CacheSubnetGroupName: "MemcacheSubnetGroupName"  
+        VpcSecurityGroupIds:
+          - !Ref MemcacheEC2SecurityGroup  
 
     MemCacheSecurityGroup:
       Type: AWS::ElastiCache::SecurityGroup
       Properties: 
         Description: "Memcached Security Group"
-    
-    MemcachedEC2Instance:
-      Type: AWS::EC2::Instance
-      Properties:
-        KeyName: Jettator_EC2_Instance_Key_Name
-        SecurityGroupIds: 
-          - !Ref MemcacheEC2SecurityGroup
-        InstanceType: t2.nano
-        AvailabilityZone: us-east-1a
-        ImageId: ami-80861296
-        Tags:
-          -
-            Key: Name
-            Value: "Memcached_Web_Server"
+
+    MemcacheSubnetGroup:
+      Type: AWS::ElastiCache::SubnetGroup
+      Properties: 
+        CacheSubnetGroupName: MemcacheSubnetGroupName
+        Description: Memcached Subnet Group
+        SubnetIds: 
+          - subnet-a5d530f9
 
     MemcacheEC2SecurityGroup:
       Type: AWS::EC2::SecurityGroup
       Properties: 
         GroupDescription: "Security Group for MemcachedEC2 Instance"
-        GroupName: Memcache_Instance_Security_Group
         SecurityGroupEgress: 
           - IpProtocol: tcp
             FromPort: 80
@@ -123,8 +117,32 @@ resources:
           - 
             Key: Name
             Value: "Memcache_EC2_Instance_SG"
-        VpcId: "vpc-13c64268"     
-        
+        VpcId: vpc-ddefaca6
+
+    
+    MemcachedEC2Instance:
+      Type: AWS::EC2::Instance
+      Properties:
+        KeyName: Jettator_EC2_Instance_Key_Name
+        # SecurityGroupIds: 
+        #   - !GetAtt MemcacheEC2SecurityGroup.GroupId
+        InstanceType: t2.nano
+        AvailabilityZone: us-east-1a
+        ImageId: ami-80861296
+        Tags:
+          -
+            Key: Name
+            Value: "Memcached_EC2_Instance"
+        NetworkInterfaces: 
+          - 
+            SubnetId: subnet-a5d530f9
+            AssociatePublicIpAddress: true
+            DeviceIndex: "0"
+            GroupSet: 
+              -
+                !Ref MemcacheEC2SecurityGroup
+        # SubnetId: subnet-a5d530f9
+
     EC2SecurityGroupEgress:
       Type: AWS::EC2::SecurityGroupEgress
       Properties: 
@@ -141,17 +159,47 @@ resources:
         Description: "Addition Inbound 11211 port"
         FromPort: 11211
         ToPort: 11211
+        CidrIp: 0.0.0.0/0
         IpProtocol: tcp
         GroupId: !GetAtt MemcacheEC2SecurityGroup.GroupId
-        SourceSecurityGroupId: !Ref MemcacheEC2SecurityGroup
+        # SourceSecurityGroupId: !Ref MemcacheEC2SecurityGroup
     
-    MemcacheSecurityGroupIngress:
-      Type: AWS::ElastiCache::SecurityGroupIngress
+    # MemcacheSecurityGroupIngress:
+    #   Type: AWS::ElastiCache::SecurityGroupIngress
+    #   Properties: 
+    #     CacheSecurityGroupName: !Ref MemCacheSecurityGroup
+    #     EC2SecurityGroupName: !Ref MemcacheEC2SecurityGroup
+    #     EC2SecurityGroupOwnerId: "590449824367"
+
+    MemcacheEC2CustomRouteTable:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId: vpc-ddefaca6      
+        Tags:
+          - 
+            Key: Name
+            Value: "Memcache_EC2_Custom_Route_Table"             
+
+    MemcacheEC2PublicSubnetCustomRoute:
+      Type: AWS::EC2::Route
+      Properties:
+       RouteTableId: rtb-936d3aef
+       DestinationCidrBlock: 0.0.0.0/0
+       GatewayId: igw-5bc55723    
+
+    MemcacheEC2PrivateSubnetCustomRoute:
+      Type: AWS::EC2::Route
+      Properties:
+       RouteTableId: !Ref MemcacheEC2CustomRouteTable
+       DestinationCidrBlock: 0.0.0.0/0
+       NatGatewayId: nat-082b2c06bc2c0e258       
+       
+    MemcacheEC2SubnetRouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
       Properties: 
-        CacheSecurityGroupName: !Ref MemCacheSecurityGroup
-        EC2SecurityGroupName: "Memcache_Instance_Security_Group"
-        EC2SecurityGroupOwnerId: "590449824367"
-    
+        RouteTableId: !Ref MemcacheEC2CustomRouteTable
+        SubnetId: subnet-a5d530f9    
+
     MemCachedServiceLambdaRole:
       Type: "AWS::IAM::Role"
       Properties: 
