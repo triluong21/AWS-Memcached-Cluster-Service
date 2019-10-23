@@ -95,18 +95,9 @@
 
 "use strict";
 
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const AxiosSingleton_1 = __webpack_require__(/*! ./singletons/AxiosSingleton */ "./src/singletons/AxiosSingleton.ts");
-exports.axiosPost = (serviceUrl, body) => __awaiter(void 0, void 0, void 0, function* () {
+exports.axiosPost = (serviceUrl, body) => {
     if (!serviceUrl) {
         throw new Error("The serviceUrl was not set.  Unable to make POST.");
     }
@@ -116,7 +107,7 @@ exports.axiosPost = (serviceUrl, body) => __awaiter(void 0, void 0, void 0, func
         timeout: 30000,
     };
     console.time("Called " + config.baseURL);
-    const axiosPromise = yield axios.post(config.baseURL, body, config);
+    const axiosPromise = axios.post(config.baseURL, body, config);
     axiosPromise.then((axiosResult) => {
         console.timeEnd("Called " + config.baseURL);
         return {
@@ -130,7 +121,7 @@ exports.axiosPost = (serviceUrl, body) => __awaiter(void 0, void 0, void 0, func
         axiosError.message = errorMessage + axiosError.message; // add url to axios error
     });
     return { response: axiosPromise };
-});
+};
 
 
 /***/ }),
@@ -238,12 +229,12 @@ const CDSGCredentials = {
     ariaAuthKey: process.env.ariaAuthKey,
     CDSGClientNumber: 5025386,
 };
-const URLGetCatalogHierarchy = "https://secure.future.stage.ariasystems.net/v1/core#GetCatalogHierarchyM";
-const URLGetClientPlansAll = "https://secure.future.stage.ariasystems.net/v1/core#GetClientPlansAllM";
+const baseUrl = "https://secure.future.stage.ariasystems.net";
+const urlVersion = "/v1/core";
+const serviceURL = baseUrl + urlVersion;
 exports.callAriaApi = (catalogSkuId) => {
     return new Promise((resolve, reject) => __awaiter(void 0, void 0, void 0, function* () {
         let numericSkuCode;
-        let serviceURL;
         let ariaBody;
         // Get catalog Sku Code from Table
         // Build serviceURL
@@ -256,20 +247,19 @@ exports.callAriaApi = (catalogSkuId) => {
         else {
             numericSkuCode = Number(catalogSkuCode);
             if (numericSkuCode === 0) {
-                serviceURL = URLGetCatalogHierarchy;
                 ariaBody = catalogHierarchyBody_1.ariaRequestCatalogHierarchyBody(CDSGCredentials);
             }
             else {
-                serviceURL = URLGetClientPlansAll;
                 ariaBody = clientPlansAllBody_1.ariaRequestClientPlansAllBody(CDSGCredentials, numericSkuCode);
             }
         }
         // Call Aria APIs
         const apiCallResult = axiosFunctions_1.axiosPost(serviceURL, ariaBody);
-        apiCallResult.then((axiosResult) => {
+        apiCallResult.response.then((axiosResult) => {
             resolve(axiosResult);
         })
             .catch((axiosError) => {
+            console.log("axiosError: ", axiosError);
             reject("NoData");
         });
     }));
@@ -318,77 +308,45 @@ var __importStar = (this && this.__importStar) || function (mod) {
     result["default"] = mod;
     return result;
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const utilityFunctions = __importStar(__webpack_require__(/*! ./utility */ "./src/utility.ts"));
-const ELASTICACHE_CONFIG_ENDPOINT = "mem-me-ky0mae2xq2zo.ih67sh.0001.use1.cache.amazonaws.com:11211";
-const memcached_1 = __importDefault(__webpack_require__(/*! memcached */ "memcached"));
-const callAria_1 = __webpack_require__(/*! ./callAria */ "./src/callAria.ts");
-memcached_1.default.config.poolSize = 25;
-memcached_1.default.config.retries = 2;
-memcached_1.default.config.retry = 1;
-const memcached = new memcached_1.default(ELASTICACHE_CONFIG_ENDPOINT, {});
 exports.MemCachedService = (event, context, callback) => {
     // Global variables
-    let keyToSearch = "";
-    let keySearchFailed = false;
-    let responseData = "";
+    let response;
     let finalResponse;
     // Assemble cache key from event.pathParameters
-    keyToSearch = utilityFunctions.keyAssembly(event);
+    const keyToSearch = utilityFunctions.keyAssembly(event);
     // Lookup keyToSearch in Memcached
-    return utilityFunctions.isKeyInCache(memcached, keyToSearch)
-        .then((cachedData) => {
-        if (cachedData === "NotFound" || keySearchFailed) {
-            const callAriaApiResult = callAria_1.callAriaApi(keyToSearch);
-            callAriaApiResult.then((callAriaApiResponse) => {
-                const keyToCache = keyToSearch;
-                const valueToCache = JSON.stringify(callAriaApiResponse.data);
-                const cacheItemTTL = 300; // Time To Live in seconds
-                const setItemToCache = utilityFunctions.setItemToCache(memcached, keyToCache, valueToCache, cacheItemTTL);
-                setItemToCache.then((SetItemToCacheResponse) => {
-                    if (SetItemToCacheResponse === "ItemIsSet") {
-                        return responseData = `"Not From Cache" ${valueToCache}`;
-                    }
-                })
-                    .catch((err) => {
-                    console.log("memcached.set erred. Error message: ", err);
-                    return err;
-                });
+    return utilityFunctions.isKeyInCache(keyToSearch)
+        .then((memcachedData) => {
+        if (memcachedData === "NotFound") {
+            const cachedAriaData = utilityFunctions.cachingAriaData(keyToSearch);
+            cachedAriaData.then((cachedAriaDataResult) => {
+                console.log("cachedAriaDataResult: ", cachedAriaDataResult);
+                response = `"Not From Cache" ${cachedAriaDataResult}`;
             })
                 .catch((err) => {
-                console.log("callAriaApi erred. Error message: ", err);
-                return "err";
+                console.log("cachedAriaData errs");
             });
         }
         else {
-            responseData = `"From Cache" ${cachedData}`;
+            response = `"From Cache" ${memcachedData}`;
         }
-        finalResponse = {
+        return finalResponse = {
             statusCode: 200,
-            body: JSON.stringify({
-                message: responseData,
-            }),
+            body: JSON.stringify({ message: response }),
         };
-        return finalResponse;
     })
         .catch((err) => {
         // NOTE: This is communication error with Memcached. For this error, we go back to Database to get what needed
         // and .set it to Memcached then return result to caller.
         // IF that .set also fails return result to caller, pretend like there was no cache exists.
         console.log("memcached.get erred. Error message: ", err);
-        keySearchFailed = true;
-        finalResponse = {
+        return finalResponse = {
             statusCode: 400,
-            body: JSON.stringify({
-                message: err,
-            }),
+            body: JSON.stringify({ message: err }),
         };
-        return finalResponse;
     });
-    // callback(null, finalResponse);
 };
 
 
@@ -436,6 +394,15 @@ exports.AxiosSingleton = AxiosSingleton;
 
 "use strict";
 
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
@@ -443,22 +410,51 @@ var __importStar = (this && this.__importStar) || function (mod) {
     result["default"] = mod;
     return result;
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
+const callAria_1 = __webpack_require__(/*! ./callAria */ "./src/callAria.ts");
 const catalogs = __importStar(__webpack_require__(/*! ./domain/CatalogSKUTable */ "./src/domain/CatalogSKUTable.ts"));
+const utilityFunctions = __importStar(__webpack_require__(/*! ./utility */ "./src/utility.ts"));
+const ELASTICACHE_CONFIG_ENDPOINT = "mem-me-ky0mae2xq2zo.ih67sh.0001.use1.cache.amazonaws.com:11211";
+const memcached_1 = __importDefault(__webpack_require__(/*! memcached */ "memcached"));
+memcached_1.default.config.poolSize = 25;
+memcached_1.default.config.retries = 2;
+memcached_1.default.config.retry = 1;
+const memcached = new memcached_1.default(ELASTICACHE_CONFIG_ENDPOINT, {});
+exports.cachingAriaData = (keyToSearch) => __awaiter(void 0, void 0, void 0, function* () {
+    const wrapperResult = yield exports.cachingAriaDataProcess(keyToSearch);
+    return wrapperResult;
+});
+exports.cachingAriaDataProcess = (keyToSearch) => {
+    let cacheResponse;
+    callAria_1.callAriaApi(keyToSearch).then((callAriaApiResponse) => {
+        const keyToCache = keyToSearch;
+        const valueToCache = JSON.stringify(callAriaApiResponse.data);
+        const cacheItemTTL = 300; // Time To Live in seconds
+        utilityFunctions.setItemToCache(keyToCache, valueToCache, cacheItemTTL)
+            .then((SetItemToCacheResponse) => {
+            if (SetItemToCacheResponse === "ItemIsSet") {
+                cacheResponse = valueToCache;
+            }
+            else if (SetItemToCacheResponse === "ItemNotSet") {
+                cacheResponse = "ItemNotCached";
+            }
+        })
+            .catch((err) => {
+            console.log("memcached.set erred. Error message: ", err);
+            cacheResponse = err;
+        });
+    });
+    return cacheResponse;
+};
 exports.getCatalogSkuCode = (catalogSkuId) => {
     let catalogSkuCode = catalogs.SKUs.get(catalogSkuId);
     if (catalogSkuCode === undefined) {
         catalogSkuCode = "NotFound";
     }
     return catalogSkuCode;
-};
-exports.getUniqueId = () => {
-    const utcDate = new Date();
-    const timeZoneOffset = utcDate.getTimezoneOffset() * 60 * 1000;
-    const localDate = utcDate - timeZoneOffset;
-    const myDate = new Date(localDate).toISOString();
-    const myId = myDate.concat(String(Math.floor(Math.random() * Math.floor(100000000))));
-    return myId;
 };
 exports.keyAssembly = (event) => {
     const DASH_TEXT = "-";
@@ -467,7 +463,7 @@ exports.keyAssembly = (event) => {
     const keyToSearch = `${STAGE_TEXT}${DASH_TEXT}${PRODID_TEXT}`;
     return keyToSearch;
 };
-exports.isKeyInCache = (memcached, cachedKey) => {
+exports.isKeyInCache = (cachedKey) => {
     // tslint:disable-next-line:no-shadowed-variable
     return new Promise((resolve, reject) => {
         memcached.get(cachedKey, (err, data) => {
@@ -481,7 +477,7 @@ exports.isKeyInCache = (memcached, cachedKey) => {
         });
     });
 };
-exports.setItemToCache = (memcached, cacheInputKey, cacheInputData, cacheInputTTL) => {
+exports.setItemToCache = (cacheInputKey, cacheInputData, cacheInputTTL) => {
     // tslint:disable-next-line:no-shadowed-variable
     return new Promise((resolve, reject) => {
         memcached.set(cacheInputKey, cacheInputData, cacheInputTTL, (err, data) => {

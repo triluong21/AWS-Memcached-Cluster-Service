@@ -1,7 +1,7 @@
-import { promises } from "fs";
 import { axiosPost } from "./axiosFunctions";
 import { ariaRequestCatalogHierarchyBody } from "./buildAriaBodyFunctions/catalogHierarchyBody";
 import { ariaRequestClientPlansAllBody } from "./buildAriaBodyFunctions/clientPlansAllBody";
+import { IApiPromiseResponse } from "./domain/cacheResponse";
 import { ICDSGCredentials } from "./domain/miscInterface";
 import { getCatalogSkuCode } from "./utility";
 
@@ -10,13 +10,13 @@ const CDSGCredentials: ICDSGCredentials = {
   CDSGClientNumber: 5025386,
 };
 
-const URLGetCatalogHierarchy = "https://secure.future.stage.ariasystems.net/v1/core#GetCatalogHierarchyM";
-const URLGetClientPlansAll = "https://secure.future.stage.ariasystems.net/v1/core#GetClientPlansAllM";
+const baseUrl = "https://secure.future.stage.ariasystems.net";
+const urlVersion = "/v1/core";
+const serviceURL = baseUrl + urlVersion;
 
-export const callAriaApi = (catalogSkuId: string): Promise<any> => {
-  return new Promise<any>(async (resolve, reject) => {
+export const callAriaApi = (catalogSkuId: string): Promise<IApiPromiseResponse> => {
+  return new Promise<IApiPromiseResponse>(async (resolve, reject) => {
     let numericSkuCode: number;
-    let serviceURL: string;
     let ariaBody: string;
 
     // Get catalog Sku Code from Table
@@ -29,10 +29,8 @@ export const callAriaApi = (catalogSkuId: string): Promise<any> => {
     } else {
       numericSkuCode = Number(catalogSkuCode);
       if (numericSkuCode === 0) {
-        serviceURL = URLGetCatalogHierarchy;
         ariaBody = ariaRequestCatalogHierarchyBody(CDSGCredentials);
       } else {
-        serviceURL = URLGetClientPlansAll;
         ariaBody = ariaRequestClientPlansAllBody(CDSGCredentials, numericSkuCode);
       }
     }
@@ -42,6 +40,7 @@ export const callAriaApi = (catalogSkuId: string): Promise<any> => {
       resolve(axiosResult);
     })
       .catch((axiosError: any) => {
+        console.log("axiosError: ", axiosError);
         reject("NoData");
       });
   });
