@@ -4,3 +4,13 @@ jspm_packages
 
 # Serverless directories
 .serverless
+
+# mac junk
+.DS_store
+
+# Webpack directories
+.webpack
+/coverage
+.dynamodb
+/.nyc_output
+/test-results.xml
