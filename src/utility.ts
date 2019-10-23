@@ -16,25 +16,26 @@ export const cachingAriaData = async (keyToSearch: string) => {
 
 export const cachingAriaDataProcess = (keyToSearch: string) => {
   let cacheResponse;
-  callAriaApi(keyToSearch).then((callAriaApiResponse: any) => {
+  return callAriaApi(keyToSearch).then((callAriaApiResponse: any) => {
     const keyToCache = keyToSearch;
     const valueToCache = JSON.stringify(callAriaApiResponse.data);
     const cacheItemTTL = 300; // Time To Live in seconds
 
-    utilityFunctions.setItemToCache(keyToCache, valueToCache, cacheItemTTL)
+    return utilityFunctions.setItemToCache(keyToCache, valueToCache, cacheItemTTL)
     .then((SetItemToCacheResponse: any) => {
       if (SetItemToCacheResponse === "ItemIsSet") {
         cacheResponse = valueToCache;
       } else if (SetItemToCacheResponse === "ItemNotSet") {
         cacheResponse = "ItemNotCached";
       }
+      //cacheResponse;
     })
       .catch((err: any) => {
         console.log("memcached.set erred. Error message: ", err);
-        cacheResponse = err;
+        //cacheResponse = err;
       });
   });
-  return cacheResponse;
+  //return cacheResponse;
 };
 
 export const getCatalogSkuCode = (catalogSkuId: string): string => {
