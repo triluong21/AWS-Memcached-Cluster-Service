@@ -28,6 +28,7 @@ export const cachingAriaDataProcess = (keyToSearch: string) => {
       } else if (SetItemToCacheResponse === "ItemNotSet") {
         cacheResponse = "ItemNotCached";
       }
+      return valueToCache;
       //cacheResponse;
     })
       .catch((err: any) => {
