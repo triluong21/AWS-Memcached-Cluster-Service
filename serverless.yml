@@ -100,15 +100,23 @@ resources:
       Properties: 
         GroupDescription: "Security Group for MemcachedEC2 Instance"
         SecurityGroupEgress: 
-          - IpProtocol: tcp
+          - IpProtocol: tcp    # Allow Internet Access for HTTP
             FromPort: 80
             ToPort: 80
             CidrIp: 0.0.0.0/0    
+          - IpProtocol: tcp   # Allow Internet Access for HTTPS
+            FromPort: 443
+            ToPort: 443
+            CidrIp: 0.0.0.0/0             
         SecurityGroupIngress: 
-          - IpProtocol: tcp
+          - IpProtocol: tcp   # Allow Internet Access for HTTP
             FromPort: 80
             ToPort: 80
             CidrIp: 0.0.0.0/0
+          - IpProtocol: tcp   # Allow Internet Access for HTTPS
+            FromPort: 443
+            ToPort: 443
+            CidrIp: 0.0.0.0/0             
           - IpProtocol: tcp
             FromPort: 22
             ToPort: 22
