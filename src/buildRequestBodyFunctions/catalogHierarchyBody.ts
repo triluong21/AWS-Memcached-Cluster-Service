@@ -1,13 +1,13 @@
 import { ICDSGCredentials } from "../domain/miscInterface";
 
-export const ariaRequestCatalogHierarchyBody = (CDSGCredentials: ICDSGCredentials): string => {
-  let ariaBody = "";
-  ariaBody = JSON.stringify({
+export const catalogHierarchyRequestBody = (CDSGCredentials: ICDSGCredentials): string => {
+  let requestBody = "";
+  requestBody = JSON.stringify({
     rest_call: "get_catalog_hierarchy_m",
     releaseVersion: "24",
     output_format: "json",
     client_no: CDSGCredentials.CDSGClientNumber,
-    auth_key: CDSGCredentials.ariaAuthKey,
+    auth_key: CDSGCredentials.catalogDbAuthKey,
     promo_code: "",
     include_plan_hierarchy: true,
     parent_plan_no: "",
@@ -25,5 +25,5 @@ export const ariaRequestCatalogHierarchyBody = (CDSGCredentials: ICDSGCredential
     // Note: If you want to retrieve more than 999 plans, you will need to call
     // this API more than once, with a different <offset> value each time (to skip /// previously-returned plans).
   });
-  return ariaBody;
+  return requestBody;
 };

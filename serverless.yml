@@ -20,7 +20,7 @@ provider:
   environment:
     serviceName: ${self:service}
     Application: Mem-cached
-    ariaAuthKey: ${ssm:AriaAuthCredentialsEncrypted~true}      
+    catalogDbAuthKey: ${ssm:AriaAuthCredentialsEncrypted~true}      
 
 # Add the serverless-webpack plugin
 plugins:
@@ -70,10 +70,10 @@ resources:
         AZMode: single-az   # Allowed Values: cross-az | single-az
         CacheNodeType: cache.m3.medium
         Engine: memcached
-        NumCacheNodes: 1
+        NumCacheNodes: 4
         Port: 11211
-        PreferredAvailabilityZones: 
-          - "us-east-1a"
+        PreferredAvailabilityZone: us-east-1a        
+        # PreferredAvailabilityZones: 
           # - "us-east-1a"
           # - "us-east-1b"
         # CacheSecurityGroupNames: 

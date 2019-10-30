@@ -1,10 +1,10 @@
 import { expect } from "chai";
-import { callAriaApi } from "../../src/callAria";
+import { callCatalogDbApi } from "../../src/callCatalogDbFunction";
 
-describe("Test callAriaApi Function", () => {
+describe("Test callCatalogDbApi Function", () => {
   it("Found", () => {
 
-    return callAriaApi("PROD-CD1")
+    return callCatalogDbApi("PROD-CD1")
     .then((result: any) => {
           console.log("myResult: ", result.data);
     });

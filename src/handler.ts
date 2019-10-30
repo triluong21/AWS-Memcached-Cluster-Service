@@ -1,5 +1,5 @@
 import { APIGatewayEvent, Callback, Context, Handler } from "aws-lambda";
-import * as utilityFunctions from "./utility";
+import * as utilities from "./utility";
 
 export const MemCachedService: Handler = (
   event: APIGatewayEvent,
@@ -7,52 +7,44 @@ export const MemCachedService: Handler = (
   callback?: Callback) => {
 
   // Global variables
-  let response: any;
   let finalResponse: any;
+  const HttpCode200 = 200;
+  const HttpCode500 = 500;
 
   // Assemble cache key from event.pathParameters
-  const keyToSearch = utilityFunctions.keyAssembly(event);
+  const cachedItemKey = utilities.keyAssembly(event);
 
-  // Lookup keyToSearch in Memcached
-  utilityFunctions.isKeyInCache(keyToSearch)
-    .then((memcachedData: any) => {
-      if (memcachedData === "NotFound") {
-        const cachedAriaData = utilityFunctions.cachingAriaData(keyToSearch);
-        cachedAriaData.then((cachedAriaDataResult) => {
-          console.log("cachedAriaDataResult: ", cachedAriaDataResult);
-          const response = {
-            statusCode: 200,
-            body: JSON.stringify({ message: `"Not From Cache" ${cachedAriaDataResult}`}),
-          };
-          callback(null, response);
+  // Lookup cachedItemKey in Memcached
+  utilities.isKeyInCache(cachedItemKey)
+    .then((cachedItemValue: any) => {
+      if (cachedItemValue === "NotFound") {
+        // cached Item NotFound, call catalog Database
+        const cachingCatalogDb = utilities.cachingCatalogDbProcess(cachedItemKey);
+        cachingCatalogDb.then((cachingCatalogDbResult: any) => {
+          console.log("cachingCatalogDbResult: ", cachingCatalogDbResult);
+          callback(null, utilities.buildHandlerResponse(HttpCode200, cachingCatalogDbResult));
         })
-        .catch ((err: any) => {
-          console.log("cachedAriaData errs: " + err);
-          const response = {
-            statusCode: 500,
-            body: JSON.stringify({ errorMessage: err}),
-          };
-          callback(null, response);
-        });
+          .catch((err: any) => {
+            console.log("cachingCatalogDb errs: " + err);
+            callback(null, utilities.buildHandlerResponse(HttpCode500, err));
+          });
       } else {
         // found it in cache!
-        const response = {
-          statusCode: 200,
-          body: JSON.stringify({ message: `"From Cache" ${memcachedData}`}),
-        };
-        callback(null, response);
+        callback(null, utilities.buildHandlerResponse(HttpCode200, cachedItemValue));
       }
-      
     })
     .catch((err: any) => {
       // NOTE: This is communication error with Memcached. For this error, we go back to Database to get what needed
       // and .set it to Memcached then return result to caller.
       // IF that .set also fails return result to caller, pretend like there was no cache exists.
-      console.log("memcached.get erred. Error message: ", err);
-      const response = {
-        statusCode: 500,
-        body: JSON.stringify({ errorMessage: err}),
-      };
-      callback(null, response);
+      const cachingCatalogDb = utilities.cachingCatalogDbProcess(cachedItemKey);
+      cachingCatalogDb.then((cachingCatalogDbResult) => {
+        console.log("cachingCatalogDbResult: ", cachingCatalogDbResult);
+        callback(null, utilities.buildHandlerResponse(HttpCode200, cachingCatalogDbResult));
+      })
+        .catch((err: any) => {
+          console.log("cachingCatalogDb errs: " + err);
+          callback(null, utilities.buildHandlerResponse(HttpCode500, err));
+        });
     });
 };

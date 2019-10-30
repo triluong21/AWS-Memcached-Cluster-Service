@@ -1,4 +1,4 @@
-import { callAriaApi } from "./callAria";
+import { callCatalogDbApi } from "./callCatalogDbFunction";
 import * as catalogs from "./domain/CatalogSKUTable";
 import * as utilityFunctions from "./utility";
 const ELASTICACHE_CONFIG_ENDPOINT = "mem-me-ky0mae2xq2zo.ih67sh.0001.use1.cache.amazonaws.com:11211";
@@ -9,34 +9,28 @@ Memcached.config.retries = 2;
 Memcached.config.retry = 1;
 const memcached = new Memcached(ELASTICACHE_CONFIG_ENDPOINT, {});
 
-export const cachingAriaData = async (keyToSearch: string) => {
-  const wrapperResult = await cachingAriaDataProcess(keyToSearch);
-  return wrapperResult;
-};
-
-export const cachingAriaDataProcess = (keyToSearch: string) => {
-  let cacheResponse;
-  return callAriaApi(keyToSearch).then((callAriaApiResponse: any) => {
+export const cachingCatalogDbProcess = (keyToSearch: string) => {
+  let cacheResponse: string;
+  return callCatalogDbApi(keyToSearch).then((callCatalogDbApiResponse: any) => {
     const keyToCache = keyToSearch;
-    const valueToCache = JSON.stringify(callAriaApiResponse.data);
+    const valueToCache = JSON.stringify(callCatalogDbApiResponse.data);
     const cacheItemTTL = 300; // Time To Live in seconds
 
     return utilityFunctions.setItemToCache(keyToCache, valueToCache, cacheItemTTL)
-    .then((SetItemToCacheResponse: any) => {
-      if (SetItemToCacheResponse === "ItemIsSet") {
-        cacheResponse = valueToCache;
-      } else if (SetItemToCacheResponse === "ItemNotSet") {
-        cacheResponse = "ItemNotCached";
-      }
-      return valueToCache;
-      //cacheResponse;
-    })
+      .then((SetItemToCacheResponse: any) => {
+        if (SetItemToCacheResponse === "ItemIsSet") {
+          cacheResponse = valueToCache;
+        } else if (SetItemToCacheResponse === "ItemNotSet") {
+          cacheResponse = "ItemNotCached";
+        }
+        return cacheResponse;
+      })
       .catch((err: any) => {
+        // need to notify that memcached.set erred out, so someone can take a look at
         console.log("memcached.set erred. Error message: ", err);
-        //cacheResponse = err;
+        cacheResponse = "ItemNotCached";
       });
   });
-  //return cacheResponse;
 };
 
 export const getCatalogSkuCode = (catalogSkuId: string): string => {
@@ -56,7 +50,6 @@ export const keyAssembly = (event: APIGatewayEvent) => {
 };
 
 export const isKeyInCache = (cachedKey: string): Promise<string> => {
-  // tslint:disable-next-line:no-shadowed-variable
   return new Promise((resolve, reject) => {
     memcached.get(cachedKey, (err: unknown, data: string) => {
       if (data) {
@@ -70,8 +63,7 @@ export const isKeyInCache = (cachedKey: string): Promise<string> => {
 };
 
 export const setItemToCache = (cacheInputKey: string,
-                               cacheInputData: string, cacheInputTTL: number): Promise<string> => {
-  // tslint:disable-next-line:no-shadowed-variable
+  cacheInputData: string, cacheInputTTL: number): Promise<string> => {
   return new Promise((resolve, reject) => {
     memcached.set(cacheInputKey, cacheInputData, cacheInputTTL, (err: unknown, data: boolean) => {
       if (err) {
@@ -82,3 +74,11 @@ export const setItemToCache = (cacheInputKey: string,
     });
   });
 };
+
+export const buildHandlerResponse = (statusCode: number, message: string | void) => {
+  const response = {
+    statusCode,
+    body: JSON.stringify(message),
+  };
+  return response;
+}

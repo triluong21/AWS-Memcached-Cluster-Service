@@ -1,14 +1,14 @@
 import { ICDSGCredentials } from "../domain/miscInterface";
 
-export const ariaRequestClientPlansAllBody = (CDSGCredentials: ICDSGCredentials,
+export const clientPlansAllRequestBody = (CDSGCredentials: ICDSGCredentials,
                                               planNumber: number): string => {
-  let ariaBody = "";
-  ariaBody = JSON.stringify({
+  let requestBody = "";
+  requestBody = JSON.stringify({
     rest_call: "get_client_plans_all_m",
     releaseVersion: "24",
     output_format: "json",
     client_no: CDSGCredentials.CDSGClientNumber,
-    auth_key: CDSGCredentials.ariaAuthKey,
+    auth_key: CDSGCredentials.catalogDbAuthKey,
     plan_no: planNumber,
     // or client_plan_id = "",
     // acct_no: 0, // filter by account number
@@ -25,5 +25,5 @@ export const ariaRequestClientPlansAllBody = (CDSGCredentials: ICDSGCredentials,
     // or locale_name: "",
     include_translations: true,
   });
-  return ariaBody;
+  return requestBody;
 };

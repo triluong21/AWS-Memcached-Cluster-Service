@@ -1,4 +1,4 @@
 export interface ICDSGCredentials {
-  ariaAuthKey: string;
+  catalogDbAuthKey: string;
   CDSGClientNumber: number;
 }
