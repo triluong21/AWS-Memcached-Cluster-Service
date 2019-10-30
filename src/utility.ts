@@ -4,33 +4,47 @@ import * as utilityFunctions from "./utility";
 const ELASTICACHE_CONFIG_ENDPOINT = "mem-me-ky0mae2xq2zo.ih67sh.0001.use1.cache.amazonaws.com:11211";
 import { APIGatewayEvent } from "aws-lambda";
 import Memcached from "memcached";
+import { stringify } from "querystring";
+import { ICachingResponse } from "./domain/miscInterface";
 Memcached.config.poolSize = 25;
 Memcached.config.retries = 2;
 Memcached.config.retry = 1;
 const memcached = new Memcached(ELASTICACHE_CONFIG_ENDPOINT, {});
 
 export const cachingCatalogDbProcess = (keyToSearch: string) => {
-  let cacheResponse: string;
+  let cachingResponse: ICachingResponse = {
+    cachingStatus: " ",
+    cachingItemKey: "",
+    cachingItemValue: " ",
+  };
   return callCatalogDbApi(keyToSearch).then((callCatalogDbApiResponse: any) => {
     const keyToCache = keyToSearch;
     const valueToCache = JSON.stringify(callCatalogDbApiResponse.data);
     const cacheItemTTL = 300; // Time To Live in seconds
-
     return utilityFunctions.setItemToCache(keyToCache, valueToCache, cacheItemTTL)
-      .then((SetItemToCacheResponse: any) => {
-        if (SetItemToCacheResponse === "ItemIsSet") {
-          cacheResponse = valueToCache;
-        } else if (SetItemToCacheResponse === "ItemNotSet") {
-          cacheResponse = "ItemNotCached";
-        }
-        return cacheResponse;
+      .then((SetItemToCacheResponse: any) => {        
+        cachingResponse.cachingStatus = SetItemToCacheResponse;
+        cachingResponse.cachingItemKey = keyToCache;
+        cachingResponse.cachingItemValue = valueToCache;
+        return cachingResponse;
       })
       .catch((err: any) => {
         // need to notify that memcached.set erred out, so someone can take a look at
         console.log("memcached.set erred. Error message: ", err);
-        cacheResponse = "ItemNotCached";
+        cachingResponse.cachingStatus = "ItemNotSet";
+        cachingResponse.cachingItemKey = keyToCache;
+        cachingResponse.cachingItemValue = valueToCache;
+        return cachingResponse;
       });
-  });
+  })
+    .catch((err: any) => {
+      // need to notify that callCatalogDbApi erred out, so someone can take a look at
+      console.log("callCatalogDbApi erred. Error message: ", err);
+      cachingResponse.cachingStatus = "callToCatalogDbFail";
+      cachingResponse.cachingItemKey = keyToSearch;
+      cachingResponse.cachingItemValue = "#Value#";
+      return cachingResponse;      
+    });
 };
 
 export const getCatalogSkuCode = (catalogSkuId: string): string => {
