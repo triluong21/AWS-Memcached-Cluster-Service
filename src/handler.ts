@@ -21,7 +21,7 @@ export const MemCachedService: Handler = (
         // cached Item NotFound, call catalog Database
         const cachingCatalogDb = utilities.cachingCatalogDbProcess(cachedItemKey);
         cachingCatalogDb.then((cachingCatalogDbResult: ICachingResponse) => {
-          if (cachingCatalogDbResult.cachingStatus === "callToCatalogDbFail") {
+          if (cachingCatalogDbResult.cachingStatus === "catalogSkuCodeNotFound") {
             // Unsuccessful call to CatalogDb
             callback(null, utilities.buildHandlerResponse(HttpCode500, cachingCatalogDbResult.cachingStatus));
           } else { // Successful called to CatalogDb
@@ -48,7 +48,7 @@ export const MemCachedService: Handler = (
       console.log("isKeyInCache errs: " + err);
       const cachingCatalogDb = utilities.cachingCatalogDbProcess(cachedItemKey);
       cachingCatalogDb.then((cachingCatalogDbResult: ICachingResponse) => {
-        if (cachingCatalogDbResult.cachingStatus === "callToCatalogDbFail") {
+        if (cachingCatalogDbResult.cachingStatus === "catalogSkuCodeNotFound") {
           // Unsuccessful call to CatalogDb
           callback(null, utilities.buildHandlerResponse(HttpCode500, cachingCatalogDbResult.cachingStatus));
         } else { // Successful called to CatalogDb

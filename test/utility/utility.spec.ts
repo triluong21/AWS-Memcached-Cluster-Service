@@ -1,20 +1,17 @@
-import { IHandlerResponse } from "@src/domain/miscInterface";
+import { ICachingResponse, IHandlerResponse } from "@src/domain/miscInterface";
 import { APIGatewayEvent } from "aws-lambda";
 import { expect } from "chai";
 import * as utilities from "../../src/utility";
 
 describe("Test cachingCatalogDbProcess Function", () => {
-  it("xxxx", () => {
+  it("ItemIsSet", () => {
     const keyToSearch = "PROD-CDB";
     return utilities.cachingCatalogDbProcess(keyToSearch)
-      .then((result) => {
-        console.log("result:", result);
+      .then((result: ICachingResponse) => {
         expect(result.cachingStatus).to.be.equal("ItemIsSet");
         expect(result.cachingItemKey).to.be.equal(keyToSearch);
-        // expect(result.cachingItemValue).exist;
       })
       .catch((error) => {
-        console.log("error:", error);
         expect(error.actual).to.be.equal("ItemNotSet");
       });
   });

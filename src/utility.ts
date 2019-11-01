@@ -1,10 +1,9 @@
 import { callCatalogDbApi } from "./callCatalogDbFunction";
 import * as catalogs from "./domain/CatalogSKUTable";
 import * as utilityFunctions from "./utility";
-const ELASTICACHE_CONFIG_ENDPOINT = "mem-me-ky0mae2xq2zo.ih67sh.0001.use1.cache.amazonaws.com:11211d";
+const ELASTICACHE_CONFIG_ENDPOINT = "mem-me-ky0mae2xq2zo.ih67sh.0001.use1.cache.amazonaws.com:11211";
 import { APIGatewayEvent } from "aws-lambda";
 import Memcached from "memcached";
-import { stringify } from "querystring";
 import { ICachingResponse, IHandlerResponse } from "./domain/miscInterface";
 Memcached.config.poolSize = 25;
 Memcached.config.retries = 2;
@@ -38,9 +37,7 @@ export const cachingCatalogDbProcess = (keyToSearch: string) => {
       });
   })
     .catch((err: any) => {
-      // need to notify that callCatalogDbApi erred out, so someone can take a look at
-      console.log("callCatalogDbApi erred. Error message: ", err);
-      cachingResponse.cachingStatus = "callToCatalogDbFail";
+      cachingResponse.cachingStatus = err;
       cachingResponse.cachingItemKey = keyToSearch;
       cachingResponse.cachingItemValue = "#Value#";
       return cachingResponse;

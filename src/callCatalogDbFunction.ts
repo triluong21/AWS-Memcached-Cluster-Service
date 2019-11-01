@@ -22,9 +22,8 @@ export const callCatalogDbApi = (catalogSkuId: string): Promise<IApiPromiseRespo
     // Get catalog Sku Code from Table
     // Build serviceURL
     // Build Request Body
-    const catalogSkuCode = getCatalogSkuCode(catalogSkuId);
+    const catalogSkuCode: string | number = getCatalogSkuCode(catalogSkuId);
     if (catalogSkuCode === "NotFound") {
-      console.log("What need to be done here");
       reject("catalogSkuCodeNotFound"); // So we don't continue processing
     } else {
       numericSkuCode = Number(catalogSkuCode);
@@ -33,15 +32,16 @@ export const callCatalogDbApi = (catalogSkuId: string): Promise<IApiPromiseRespo
       } else {
         requestBody = clientPlansAllRequestBody(CDSGCredentials, numericSkuCode);
       }
+
+      // Call CatalogDb API
+      const apiCallResult = axiosPost(serviceURL, requestBody);
+      apiCallResult.response.then((axiosResult: any) => {
+        resolve(axiosResult);
+      })
+        .catch((axiosError: any) => {
+          console.log("axiosError: ", axiosError);
+          reject("NoData");
+        });
     }
-    // Call CatalogDb API
-    const apiCallResult = axiosPost(serviceURL, requestBody);
-    apiCallResult.response.then((axiosResult: any) => {
-      resolve(axiosResult);
-    })
-      .catch((axiosError: any) => {
-        console.log("axiosError: ", axiosError);
-        reject("NoData");
-      });
   });
 };
