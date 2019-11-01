@@ -1,7 +1,7 @@
 import { axiosPost } from "./axiosFunctions";
 import { catalogHierarchyRequestBody } from "./buildRequestBodyFunctions/catalogHierarchyBody";
 import { clientPlansAllRequestBody } from "./buildRequestBodyFunctions/clientPlansAllBody";
-import { IApiPromiseResponse } from "./domain/cacheResponse";
+import { IApiPromiseResponse } from "./domain/miscInterface";
 import { ICDSGCredentials } from "./domain/miscInterface";
 import { getCatalogSkuCode } from "./utility";
 

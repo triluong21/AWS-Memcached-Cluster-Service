@@ -1,5 +1,5 @@
 import { AxiosRequestConfig } from "axios";
-import { IApiPromiseResponse } from "./domain/cacheResponse";
+import { IApiPromiseResponse } from "./domain/miscInterface";
 import { AxiosSingleton } from "./singletons/AxiosSingleton";
 
 export const axiosPost = (serviceUrl: string, body: string):

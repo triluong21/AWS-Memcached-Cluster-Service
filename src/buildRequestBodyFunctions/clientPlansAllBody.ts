@@ -1,7 +1,7 @@
 import { ICDSGCredentials } from "../domain/miscInterface";
 
 export const clientPlansAllRequestBody = (CDSGCredentials: ICDSGCredentials,
-                                              planNumber: number): string => {
+                                          planNumber: number): string => {
   let requestBody = "";
   requestBody = JSON.stringify({
     rest_call: "get_client_plans_all_m",

@@ -4,7 +4,7 @@ service: MemCachedClusterService
 
 provider:
   name: aws
-  runtime: nodejs8.10
+  runtime: nodejs10.x
   tracing: true # enable tracing
   stackTags:
     Name: ${self:service}
@@ -48,7 +48,8 @@ custom:
 functions:
   MemCachedService:
     handler: src/handler.MemCachedService
-    memorySize: 128
+    memorySize: 3008
+    timeout: 27
     role: MemCachedServiceLambdaRole
     events:
       - http:
