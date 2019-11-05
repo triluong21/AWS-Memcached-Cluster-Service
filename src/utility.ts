@@ -10,7 +10,7 @@ Memcached.config.retries = 2;
 Memcached.config.retry = 1;
 const memcached = new Memcached(ELASTICACHE_CONFIG_ENDPOINT, {});
 
-export const cachingCatalogDbProcess = (keyToSearch: string) => {
+export const cachingCatalogDbProcess = (keyToSearch: string): Promise<ICachingResponse> => {
   const cachingResponse: ICachingResponse = {
     cachingStatus: " ",
     cachingItemKey: "",

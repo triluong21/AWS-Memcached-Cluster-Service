@@ -63,6 +63,7 @@
   },
   "repository": "https://github.com/triluong21/AWS-Memcached-Cluster-Service.git",
   "devDependencies": {
-    "@types/memcached": "^2.2.6"
+    "@types/memcached": "^2.2.6",
+    "nyc": "^14.1.1"
   }
 }

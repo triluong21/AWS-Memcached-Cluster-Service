@@ -1,19 +1,108 @@
-import { ICachingResponse, IHandlerResponse } from "@src/domain/miscInterface";
+import { IHandlerResponse } from "@src/domain/miscInterface";
+import { fail } from "assert";
 import { APIGatewayEvent } from "aws-lambda";
 import { expect } from "chai";
+import sinon from "sinon";
+import * as callCatalogDbFunctionPage from "../../src/callCatalogDbFunction";
 import * as utilities from "../../src/utility";
 
 describe("Test cachingCatalogDbProcess Function", () => {
-  it("ItemIsSet", () => {
+  let sandbox: any;
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+  });
+  afterEach(() => {
+    sandbox.restore();
+  });
+  it("Successfully called callCatalogDbApi and setItemToCache", async () => {
     const keyToSearch = "PROD-CDB";
-    return utilities.cachingCatalogDbProcess(keyToSearch)
-      .then((result: ICachingResponse) => {
-        expect(result.cachingStatus).to.be.equal("ItemIsSet");
-        expect(result.cachingItemKey).to.be.equal(keyToSearch);
-      })
-      .catch((error) => {
-        expect(error.actual).to.be.equal("ItemNotSet");
-      });
+    const callCatalogDbApiEResponse: any = {
+      status: 200,
+      statusText: "OK",
+      data: {
+        error_code: 0, error_msg: "OK", plans_count: 1,
+        all_client_plan_dtls: [{
+          billing_ind: 1,
+          client_plan_id: "CDSG_Testing_Plan",
+          currency_cd: "usd",
+          display_ind: 1,
+          first_retrieval_level_ind: "true",
+          init_free_period_uom_cd: "1",
+          initial_plan_status_cd: 1,
+          new_acct_status: 1,
+          nso_incl_list_scope: 0,
+          plan_name: "CDSG Testing Plan",
+          plan_no: 11274578,
+        }],
+      },
+    };
+    // stub callCatalogDbApi function
+    const callCatalogDbApiPromise = Promise.resolve(callCatalogDbApiEResponse);
+    sandbox.stub(callCatalogDbFunctionPage, "callCatalogDbApi").returns(callCatalogDbApiPromise);
+    // stub setItemToCache function
+    const setItemToCachePromise = Promise.resolve("ItemIsSet");
+    sandbox.stub(utilities, "setItemToCache").returns(setItemToCachePromise);
+
+    try {
+      const result = await utilities.cachingCatalogDbProcess(keyToSearch);
+      expect(result.cachingStatus).to.be.equal("ItemIsSet");
+      expect(result.cachingItemKey).to.be.equal(keyToSearch);
+      expect(result.cachingItemValue).to.be.equal(JSON.stringify(callCatalogDbApiEResponse.data));
+    } catch (error) {
+      fail("We should not fall down to here")
+    }
+  });
+  it("Called callCatalogDbApi OK and setItemToCache failed", async () => {
+    const keyToSearch = "PROD-CDB";
+    const callCatalogDbApiEResponse: any = {
+      status: 200,
+      statusText: "OK",
+      data: {
+        error_code: 0, error_msg: "OK", plans_count: 1,
+        all_client_plan_dtls: [{
+          billing_ind: 1,
+          client_plan_id: "CDSG_Testing_Plan",
+          currency_cd: "usd",
+          display_ind: 1,
+          first_retrieval_level_ind: "true",
+          init_free_period_uom_cd: "1",
+          initial_plan_status_cd: 1,
+          new_acct_status: 1,
+          nso_incl_list_scope: 0,
+          plan_name: "CDSG Testing Plan",
+          plan_no: 11274578,
+        }],
+      },
+    };
+    // stub callCatalogDbApi function
+    const callCatalogDbApiPromise = Promise.resolve(callCatalogDbApiEResponse);
+    sandbox.stub(callCatalogDbFunctionPage, "callCatalogDbApi").returns(callCatalogDbApiPromise);
+    // stub setItemToCache function
+    const setItemToCachePromise = Promise.resolve("ItemNotSet");
+    sandbox.stub(utilities, "setItemToCache").returns(setItemToCachePromise);
+
+    try {
+      const result = await utilities.cachingCatalogDbProcess(keyToSearch);
+      expect(result.cachingStatus).to.be.equal("ItemNotSet");
+      expect(result.cachingItemKey).to.be.equal(keyToSearch);
+      expect(result.cachingItemValue).to.be.equal(JSON.stringify(callCatalogDbApiEResponse.data));
+    } catch (error) {
+      fail("We should not fall down to here");
+    }
+  });
+  it("Call callCatalogDbApi failed", async () => {
+    const keyToSearch = "PROD-CDB";
+    // stub callCatalogDbApi function
+    const callCatalogDbApiPromise = Promise.reject("NoData");
+    sandbox.stub(callCatalogDbFunctionPage, "callCatalogDbApi").returns(callCatalogDbApiPromise);
+    try {
+      const result = await utilities.cachingCatalogDbProcess(keyToSearch);
+      expect(result.cachingStatus).to.be.equal("NoData");
+      expect(result.cachingItemKey).to.be.equal(keyToSearch);
+      expect(result.cachingItemValue).to.be.equal("#Value#");
+    } catch (error) {
+      fail("We should not fall down to here");
+    }
   });
 });
 describe("Test getCatalogSkuCode Function", () => {

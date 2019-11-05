@@ -13,7 +13,6 @@ const CDSGCredentials: ICDSGCredentials = {
 const baseUrl = "https://secure.future.stage.ariasystems.net";
 const urlVersion = "/v1/core";
 const serviceURL = baseUrl + urlVersion;
-
 export const callCatalogDbApi = (catalogSkuId: string): Promise<IApiPromiseResponse> => {
   return new Promise<IApiPromiseResponse>(async (resolve, reject) => {
     let numericSkuCode: number;
@@ -32,10 +31,9 @@ export const callCatalogDbApi = (catalogSkuId: string): Promise<IApiPromiseRespo
       } else {
         requestBody = clientPlansAllRequestBody(CDSGCredentials, numericSkuCode);
       }
-
       // Call CatalogDb API
       const apiCallResult = axiosPost(serviceURL, requestBody);
-      apiCallResult.response.then((axiosResult: any) => {
+      return apiCallResult.response.then((axiosResult: any) => {
         resolve(axiosResult);
       })
         .catch((axiosError: any) => {
